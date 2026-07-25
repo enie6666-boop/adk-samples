@@ -11,7 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Customer entity module."""
+
+"""Customer and hair-consultation entities for the ENIE sales agent."""
 
 from typing import Optional
 
@@ -19,180 +20,142 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class Address(BaseModel):
-    """
-    Represents a customer's address.
-    """
+    """Customer shipping or billing address."""
 
-    street: str
-    city: str
-    state: str
-    zip: str
+    street: str = ""
+    district: str = ""
+    province: str = ""
+    postal_code: str = ""
+    country: str = "TH"
     model_config = ConfigDict(from_attributes=True)
 
 
 class Product(BaseModel):
-    """
-    Represents a product in a customer's purchase history.
-    """
+    """Product recorded in an order history."""
 
     product_id: str
     name: str
-    quantity: int
+    quantity: int = Field(ge=1)
+    unit_price: float | None = Field(default=None, ge=0)
     model_config = ConfigDict(from_attributes=True)
 
 
 class Purchase(BaseModel):
-    """
-    Represents a customer's purchase.
-    """
+    """Completed customer purchase."""
 
+    order_id: str
     date: str
     items: list[Product]
-    total_amount: float
+    total_amount: float = Field(ge=0)
+    status: str = "completed"
     model_config = ConfigDict(from_attributes=True)
 
 
 class CommunicationPreferences(BaseModel):
-    """
-    Represents a customer's communication preferences.
-    """
+    """Consent and preferred channels for customer communication."""
 
-    email: bool = True
-    sms: bool = True
-    push_notifications: bool = True
+    line: bool = True
+    messenger: bool = False
+    email: bool = False
+    phone: bool = False
+    marketing_consent: bool = False
+    follow_up_consent: bool = False
+    preferred_channel: str = "line"
     model_config = ConfigDict(from_attributes=True)
 
 
-class GardenProfile(BaseModel):
-    """
-    Represents a customer's garden profile.
-    """
+class ChemicalService(BaseModel):
+    """A chemical service previously performed on the customer's hair."""
 
-    type: str
-    size: str
-    sun_exposure: str
-    soil_type: str
-    interests: list[str]
+    service_type: str
+    performed_at: str | None = None
+    notes: str = ""
+    model_config = ConfigDict(from_attributes=True)
+
+
+class HairProfile(BaseModel):
+    """Structured information used to provide safer hair recommendations."""
+
+    strand_thickness: str | None = None
+    density: str | None = None
+    porosity: str | None = None
+    scalp_condition: str | None = None
+    current_condition: list[str] = Field(default_factory=list)
+    chemical_history: list[ChemicalService] = Field(default_factory=list)
+    allergy_or_irritation_history: str | None = None
+    current_goal: str | None = None
+    professional_notes: list[str] = Field(default_factory=list)
+    last_updated_at: str | None = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ConsultationRecord(BaseModel):
+    """Summary of a consultation between the agent and customer."""
+
+    consultation_id: str
+    created_at: str
+    channel: str
+    customer_goal: str
+    observations: list[str] = Field(default_factory=list)
+    recommendations: list[str] = Field(default_factory=list)
+    safety_notes: list[str] = Field(default_factory=list)
+    follow_up_required: bool = False
     model_config = ConfigDict(from_attributes=True)
 
 
 class Customer(BaseModel):
-    """
-    Represents a customer.
-    """
+    """Customer CRM record used by the ENIE hair sales agent."""
 
     account_number: str
     customer_id: str
     customer_first_name: str
-    customer_last_name: str
-    email: str
-    phone_number: str
-    customer_start_date: str
-    years_as_customer: int
-    billing_address: Address
-    purchase_history: list[Purchase]
-    loyalty_points: int
-    preferred_store: str
-    communication_preferences: CommunicationPreferences
-    garden_profile: GardenProfile
-    scheduled_appointments: dict = Field(default_factory=dict)
+    customer_last_name: str = ""
+    email: str = ""
+    phone_number: str = ""
+    line_user_id: str | None = None
+    messenger_user_id: str | None = None
+    customer_start_date: str = ""
+    years_as_customer: int = Field(default=0, ge=0)
+    shipping_address: Address = Field(default_factory=Address)
+    purchase_history: list[Purchase] = Field(default_factory=list)
+    loyalty_points: int = Field(default=0, ge=0)
+    preferred_store: str = "ENIE Online"
+    communication_preferences: CommunicationPreferences = Field(
+        default_factory=CommunicationPreferences
+    )
+    hair_profile: HairProfile = Field(default_factory=HairProfile)
+    consultation_history: list[ConsultationRecord] = Field(default_factory=list)
+    scheduled_follow_ups: dict = Field(default_factory=dict)
     model_config = ConfigDict(from_attributes=True)
 
     def to_json(self) -> str:
-        """
-        Converts the Customer object to a JSON string.
+        """Return the customer record as formatted JSON."""
 
-        Returns:
-            A JSON string representing the Customer object.
-        """
         return self.model_dump_json(indent=4)
 
     @staticmethod
     def get_customer(current_customer_id: str) -> Optional["Customer"]:
-        """
-        Retrieves a customer based on their ID.
+        """Return a development customer until a real CRM is configured."""
 
-        Args:
-            customer_id: The ID of the customer to retrieve.
-
-        Returns:
-            The Customer object if found, None otherwise.
-        """
-        # In a real application, this would involve a database lookup.
-        # For this example, we'll just return a dummy customer.
         return Customer(
             customer_id=current_customer_id,
-            account_number="428765091",
-            customer_first_name="Alex",
-            customer_last_name="Johnson",
-            email="alex.johnson@example.com",
-            phone_number="+1-702-555-1212",
-            customer_start_date="2022-06-10",
-            years_as_customer=2,
-            billing_address=Address(
-                street="123 Main St", city="Anytown", state="CA", zip="12345"
-            ),
-            purchase_history=[  # Example purchase history
-                Purchase(
-                    date="2023-03-05",
-                    items=[
-                        Product(
-                            product_id="fert-111",
-                            name="All-Purpose Fertilizer",
-                            quantity=1,
-                        ),
-                        Product(
-                            product_id="trowel-222",
-                            name="Gardening Trowel",
-                            quantity=1,
-                        ),
-                    ],
-                    total_amount=35.98,
-                ),
-                Purchase(
-                    date="2023-07-12",
-                    items=[
-                        Product(
-                            product_id="seeds-333",
-                            name="Tomato Seeds (Variety Pack)",
-                            quantity=2,
-                        ),
-                        Product(
-                            product_id="pots-444",
-                            name="Terracotta Pots (6-inch)",
-                            quantity=4,
-                        ),
-                    ],
-                    total_amount=42.5,
-                ),
-                Purchase(
-                    date="2024-01-20",
-                    items=[
-                        Product(
-                            product_id="gloves-555",
-                            name="Gardening Gloves (Leather)",
-                            quantity=1,
-                        ),
-                        Product(
-                            product_id="pruner-666",
-                            name="Pruning Shears",
-                            quantity=1,
-                        ),
-                    ],
-                    total_amount=55.25,
-                ),
-            ],
-            loyalty_points=133,
-            preferred_store="Anytown Garden Store",
+            account_number="ENIE-DEMO-001",
+            customer_first_name="ลูกค้า",
+            customer_start_date="2026-01-01",
+            years_as_customer=0,
+            line_user_id="line-demo-user",
+            shipping_address=Address(),
+            purchase_history=[],
+            loyalty_points=0,
+            preferred_store="ENIE Online",
             communication_preferences=CommunicationPreferences(
-                email=True, sms=False, push_notifications=True
+                line=True,
+                messenger=False,
+                marketing_consent=False,
+                follow_up_consent=False,
+                preferred_channel="line",
             ),
-            garden_profile=GardenProfile(
-                type="backyard",
-                size="medium",
-                sun_exposure="full sun",
-                soil_type="unknown",
-                interests=["flowers", "vegetables"],
-            ),
-            scheduled_appointments={},
+            hair_profile=HairProfile(),
+            consultation_history=[],
+            scheduled_follow_ups={},
         )
