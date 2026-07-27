@@ -14,6 +14,12 @@
 
 """Typed UI contract shared by the ENIE agent and frontend clients."""
 
+from .normalizer import normalize_agent_output
 from .schema import ChatResponse, FrontendAction, TextMessage
 
-__all__ = ["ChatResponse", "FrontendAction", "TextMessage"]
+__all__ = [
+    "ChatResponse",
+    "FrontendAction",
+    "TextMessage",
+    "normalize_agent_output",
+]
